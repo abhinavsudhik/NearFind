@@ -38,16 +38,47 @@ class OrderStatusHistory {
   }
 }
 
+class OrderItem {
+  final String productId;
+  final String productName;
+  final int quantity;
+  final int pricePerUnit;
+
+  const OrderItem({
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.pricePerUnit,
+  });
+
+  int get totalPrice => quantity * pricePerUnit;
+
+  factory OrderItem.fromMap(Map<String, dynamic> map) {
+    return OrderItem(
+      productId: map['productId'] as String,
+      productName: map['productName'] as String,
+      quantity: (map['quantity'] as num).toInt(),
+      pricePerUnit: (map['pricePerUnit'] as num).toInt(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'productId': productId,
+      'productName': productName,
+      'quantity': quantity,
+      'pricePerUnit': pricePerUnit,
+    };
+  }
+}
+
 class NearFindOrder {
   final String id;
   final String customerId;
   final String retailerId;
   final String retailerName;
   final String? deliveryPartnerId;
-  final String productId;
-  final String productName;
-  final int quantity;
-  final int pricePerUnit;
+  final List<OrderItem> items;
   final OrderStatus status;
   final DateTime placedAt;
   final List<OrderStatusHistory> statusHistory;
@@ -59,17 +90,14 @@ class NearFindOrder {
     required this.retailerId,
     required this.retailerName,
     this.deliveryPartnerId,
-    required this.productId,
-    required this.productName,
-    required this.quantity,
-    required this.pricePerUnit,
+    required this.items,
     required this.status,
     required this.placedAt,
     required this.statusHistory,
     this.cancellationReason,
   });
 
-  int get totalPrice => quantity * pricePerUnit;
+  int get totalPrice => items.fold(0, (total, item) => total + item.totalPrice);
 
   static String statusLabel(OrderStatus s) {
     switch (s) {
@@ -98,6 +126,22 @@ class NearFindOrder {
                 (e) => OrderStatusHistory.fromMap(e as Map<String, dynamic>))
             .toList() ??
         [];
+    var itemsList = (data['items'] as List<dynamic>?)
+            ?.map((e) => OrderItem.fromMap(e as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    // Backward compatibility: migrate legacy single-item orders
+    if (itemsList.isEmpty && data['productId'] != null) {
+      itemsList = [
+        OrderItem(
+          productId: data['productId'] as String,
+          productName: data['productName'] as String? ?? 'Unknown Product',
+          quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+          pricePerUnit: (data['pricePerUnit'] as num?)?.toInt() ?? 0,
+        ),
+      ];
+    }
 
     return NearFindOrder(
       id: doc.id,
@@ -105,10 +149,7 @@ class NearFindOrder {
       retailerId: data['retailerId'] as String,
       retailerName: data['retailerName'] as String,
       deliveryPartnerId: data['deliveryPartnerId'] as String?,
-      productId: data['productId'] as String,
-      productName: data['productName'] as String,
-      quantity: (data['quantity'] as num).toInt(),
-      pricePerUnit: (data['pricePerUnit'] as num).toInt(),
+      items: itemsList,
       status: OrderStatus.values.byName(data['status'] as String),
       placedAt: (data['placedAt'] as Timestamp).toDate(),
       statusHistory: historyList,
@@ -122,10 +163,7 @@ class NearFindOrder {
       'retailerId': retailerId,
       'retailerName': retailerName,
       'deliveryPartnerId': deliveryPartnerId,
-      'productId': productId,
-      'productName': productName,
-      'quantity': quantity,
-      'pricePerUnit': pricePerUnit,
+      'items': items.map((e) => e.toMap()).toList(),
       'status': status.name,
       'placedAt': Timestamp.fromDate(placedAt),
       'statusHistory': statusHistory.map((e) => e.toMap()).toList(),

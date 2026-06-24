@@ -207,6 +207,7 @@ class _PendingOrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final truncatedId = order.id.length > 8 ? order.id.substring(0, 8) : order.id;
 
     return Card(
       elevation: 0,
@@ -216,14 +217,15 @@ class _PendingOrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header: product name + time ago ──────────────────────
+            // ── Header: Order ID + time ago ──────────────────────
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    order.productName,
+                    'Order #$truncatedId',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
                     ),
                   ),
                 ),
@@ -241,21 +243,40 @@ class _PendingOrderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-            // ── Details row ──────────────────────────────────────────
+            // ── Items List ──────────────────────────────────────────
+            ...order.items.map((item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item.quantity}x ${item.productName}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹${item.totalPrice}',
+                        style: textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                )),
+            const Divider(height: 20),
+
+            // ── Total row ──────────────────────────────────────────
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _DetailChip(
-                  icon: Icons.inventory_2_outlined,
-                  label: 'Qty: ${order.quantity}',
+                Text(
+                  'Total Amount:',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _DetailChip(
-                  icon: Icons.currency_rupee_rounded,
-                  label: '₹${order.pricePerUnit} / unit',
-                ),
-                const Spacer(),
                 Text(
                   '₹${order.totalPrice}',
                   style: textTheme.titleMedium?.copyWith(
@@ -469,6 +490,7 @@ class _ActiveOrderCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final action = _nextAction();
+    final truncatedId = order.id.length > 8 ? order.id.substring(0, 8) : order.id;
 
     return Card(
       elevation: 0,
@@ -478,14 +500,15 @@ class _ActiveOrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header: product name + status badge ──────────────────
+            // ── Header: Order ID + status badge ──────────────────
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    order.productName,
+                    'Order #$truncatedId',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
                     ),
                   ),
                 ),
@@ -505,21 +528,40 @@ class _ActiveOrderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-            // ── Details row ──────────────────────────────────────────
+            // ── Items List ──────────────────────────────────────────
+            ...order.items.map((item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item.quantity}x ${item.productName}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹${item.totalPrice}',
+                        style: textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                )),
+            const Divider(height: 20),
+
+            // ── Total row ──────────────────────────────────────────
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _DetailChip(
-                  icon: Icons.inventory_2_outlined,
-                  label: 'Qty: ${order.quantity}',
+                Text(
+                  'Total Amount:',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _DetailChip(
-                  icon: Icons.currency_rupee_rounded,
-                  label: '₹${order.pricePerUnit} / unit',
-                ),
-                const Spacer(),
                 Text(
                   '₹${order.totalPrice}',
                   style: textTheme.titleMedium?.copyWith(

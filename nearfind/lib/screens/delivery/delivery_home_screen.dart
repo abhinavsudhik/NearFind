@@ -327,7 +327,11 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        '${order.quantity}x ${order.productName}',
+                                        order.items.isEmpty
+                                            ? 'No items'
+                                            : order.items.length == 1
+                                                ? '${order.items[0].quantity}x ${order.items[0].productName}'
+                                                : '${order.items[0].productName} & ${order.items.length - 1} more',
                                         style: textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -656,24 +660,29 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
                         ),
                       ),
                       const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${order.quantity}x ${order.productName}',
-                            style: textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
+                      ...order.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${item.quantity}x ${item.productName}',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '₹${item.totalPrice}',
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            '₹${order.totalPrice}',
-                            style: textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
+                          )),
                       const SizedBox(height: 20),
 
                       // Store / Pickup details

@@ -168,25 +168,39 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                       ),
                       const Divider(height: 24),
                       _DetailRow(
-                        label: 'Product',
-                        value: order.productName,
-                        textTheme: textTheme,
-                      ),
-                      _DetailRow(
                         label: 'Retailer',
                         value: order.retailerName,
                         textTheme: textTheme,
                       ),
-                      _DetailRow(
-                        label: 'Quantity',
-                        value: '${order.quantity}',
-                        textTheme: textTheme,
+                      const SizedBox(height: 12),
+                      Text(
+                        'Items',
+                        style: textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                      _DetailRow(
-                        label: 'Price per unit',
-                        value: '₹${order.pricePerUnit}',
-                        textTheme: textTheme,
-                      ),
+                      const SizedBox(height: 8),
+                      ...order.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${item.quantity}x ${item.productName}',
+                                    style: textTheme.bodyMedium,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${item.totalPrice}',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
                       const Divider(height: 24),
                       _DetailRow(
                         label: 'Total',

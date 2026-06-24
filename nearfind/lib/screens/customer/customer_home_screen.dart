@@ -43,26 +43,38 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
 
     final uid = context.read<RoleProvider>().uid ?? '';
-    final items = cart.items.values.toList();
-    int placedCount = 0;
-    List<String> failedItems = [];
+    final groupedItems = <String, List<CartItem>>{};
+    for (final item in cart.items.values) {
+      groupedItems.putIfAbsent(item.retailer.retailerId, () => []).add(item);
+    }
 
-    for (final item in items) {
+    int placedCount = 0;
+    List<String> failedRetailers = [];
+
+    for (final entry in groupedItems.entries) {
+      final retailerId = entry.key;
+      final cartItems = entry.value;
+      final retailerName = cartItems.first.retailer.retailerName;
+
+      final orderItems = cartItems.map((item) => OrderItem(
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        pricePerUnit: item.retailer.price,
+      )).toList();
+
       try {
         final orderId = await _firestoreService.placeOrder(
           customerId: uid,
-          productId: item.product.id,
-          productName: item.product.name,
-          retailerId: item.retailer.retailerId,
-          retailerName: item.retailer.retailerName,
-          quantity: item.quantity,
-          pricePerUnit: item.retailer.price,
+          retailerId: retailerId,
+          retailerName: retailerName,
+          items: orderItems,
         );
 
         OrderTimerService.instance.startTimer(orderId, _firestoreService);
         placedCount++;
       } catch (e) {
-        failedItems.add(item.product.name);
+        failedRetailers.add(retailerName);
       }
     }
 
@@ -86,10 +98,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       }
     }
 
-    if (failedItems.isNotEmpty && context.mounted) {
+    if (failedRetailers.isNotEmpty && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to place order for: ${failedItems.join(', ')}'),
+          content: Text('Failed to place order for: ${failedRetailers.join(', ')}'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -816,6 +828,15 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
+    final String itemsSummary;
+    if (order.items.isEmpty) {
+      itemsSummary = 'No items';
+    } else if (order.items.length == 1) {
+      itemsSummary = '${order.items[0].quantity}x ${order.items[0].productName}';
+    } else {
+      itemsSummary = '${order.items[0].productName} & ${order.items.length - 1} more';
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -832,7 +853,7 @@ class _OrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      order.productName,
+                      itemsSummary,
                       style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),

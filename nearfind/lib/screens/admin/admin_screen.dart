@@ -388,7 +388,11 @@ class _AdminScreenState extends State<AdminScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${order.productName} × ${order.quantity}',
+                                          order.items.isEmpty
+                                              ? 'No items'
+                                              : order.items.length == 1
+                                                  ? '${order.items[0].productName} × ${order.items[0].quantity}'
+                                                  : '${order.items[0].productName} & ${order.items.length - 1} more',
                                           style: theme.textTheme.bodyLarge?.copyWith(
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -437,8 +441,37 @@ class _AdminScreenState extends State<AdminScreen> {
                                 ],
                               ),
 
-                              // Expanded Timeline
-                              if (isExpanded) _buildTimeline(order),
+                              // Expanded Items list & Timeline
+                              if (isExpanded) ...[
+                                const Divider(height: 24),
+                                Text(
+                                  'Items',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...order.items.map((item) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${item.quantity}x ${item.productName}',
+                                            style: theme.textTheme.bodyMedium,
+                                          ),
+                                          Text(
+                                            '₹${item.totalPrice}',
+                                            style: theme.textTheme.bodyMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                _buildTimeline(order),
+                              ],
                             ],
                           ),
                         ),

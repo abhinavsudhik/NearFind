@@ -27,91 +27,65 @@ class FirestoreService {
   /// Returns the newly created order document ID.
   Future<String> placeOrder({
     required String customerId,
-    required String productId,
-    required String productName,
     required String retailerId,
     required String retailerName,
-    required int quantity,
-    required int pricePerUnit,
+    required List<OrderItem> items,
   }) async {
-    final batch = _db.batch();
     final orderRef = _db.collection('orders').doc();
     final now = Timestamp.now();
-
-    // Create the order document.
-    batch.set(orderRef, {
-      'customerId': customerId,
-      'productId': productId,
-      'productName': productName,
-      'retailerId': retailerId,
-      'retailerName': retailerName,
-      'quantity': quantity,
-      'pricePerUnit': pricePerUnit,
-      'status': OrderStatus.placed.name,
-      'deliveryPartnerId': null,
-      'placedAt': now,
-      'statusHistory': [
-        {
-          'status': OrderStatus.placed.name,
-          'timestamp': now,
-        },
-      ],
-    });
-
-    // Decrement the retailer's stock inside the product document.
-    // Products store retailers as an array, so we need a transaction to
-    // read-then-write safely. However, the caller asked for a batch write,
-    // so we do the stock update via a transaction that also commits the order.
-    // We'll use a transaction instead to cover both operations atomically.
     final orderId = orderRef.id;
 
-    // Discard the plain batch – switch to a transaction for atomicity with
-    // the read-modify-write on the product's retailers array.
     await _db.runTransaction((txn) async {
-      final productDoc =
-          await txn.get(_db.collection('products').doc(productId));
-
-      if (!productDoc.exists) {
-        throw Exception('Product $productId not found');
+      // 1. Fetch all product documents first
+      final productDocs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final item in items) {
+        if (!productDocs.containsKey(item.productId)) {
+          final doc = await txn.get(_db.collection('products').doc(item.productId));
+          if (!doc.exists) {
+            throw Exception('Product ${item.productId} not found');
+          }
+          productDocs[item.productId] = doc;
+        }
       }
 
-      final data = productDoc.data()!;
-      final retailers = List<Map<String, dynamic>>.from(
-        data['retailers'] as List<dynamic>,
-      );
+      // 2. Perform validations and update stocks
+      for (final item in items) {
+        final productDoc = productDocs[item.productId]!;
+        final data = productDoc.data()!;
+        final retailers = List<Map<String, dynamic>>.from(
+          data['retailers'] as List<dynamic>,
+        );
 
-      final idx = retailers.indexWhere((r) => r['retailerId'] == retailerId);
-      if (idx == -1) {
-        throw Exception('Retailer $retailerId not found on product $productId');
+        final idx = retailers.indexWhere((r) => r['retailerId'] == retailerId);
+        if (idx == -1) {
+          throw Exception('Retailer $retailerId not found on product ${item.productId}');
+        }
+
+        final currentStock = (retailers[idx]['stock'] as num).toInt();
+        if (currentStock < item.quantity) {
+          throw Exception('Insufficient stock for ${item.productName} (available: $currentStock)');
+        }
+
+        retailers[idx] = {
+          ...retailers[idx],
+          'stock': currentStock - item.quantity,
+        };
+
+        // Update stock inside transaction.
+        txn.update(
+          _db.collection('products').doc(item.productId),
+          {'retailers': retailers},
+        );
       }
 
-      final currentStock = (retailers[idx]['stock'] as num).toInt();
-      if (currentStock < quantity) {
-        throw Exception('Insufficient stock (available: $currentStock)');
-      }
-
-      retailers[idx] = {
-        ...retailers[idx],
-        'stock': currentStock - quantity,
-      };
-
-      // Update stock.
-      txn.update(
-        _db.collection('products').doc(productId),
-        {'retailers': retailers},
-      );
-
-      // Create order inside the same transaction.
+      // 3. Create consolidated order inside transaction.
       txn.set(orderRef, {
         'customerId': customerId,
-        'productId': productId,
-        'productName': productName,
         'retailerId': retailerId,
         'retailerName': retailerName,
-        'quantity': quantity,
-        'pricePerUnit': pricePerUnit,
-        'status': OrderStatus.placed.name,
         'deliveryPartnerId': null,
+        'items': items.map((e) => e.toMap()).toList(),
+        'status': OrderStatus.placed.name,
         'placedAt': now,
         'statusHistory': [
           {
@@ -197,7 +171,7 @@ class FirestoreService {
   }
 
   /// Cancels an order with a [reason], setting status to cancelled.
-  /// Also replenishes the retailer's stock for the product.
+  /// Also replenishes the retailer's stock for all items.
   Future<void> cancelOrder(String orderId, String reason) async {
     await _db.runTransaction((txn) async {
       final orderRef = _db.collection('orders').doc(orderId);
@@ -215,29 +189,31 @@ class FirestoreService {
         return;
       }
 
-      final productId = orderData['productId'] as String;
       final retailerId = orderData['retailerId'] as String;
-      final quantity = (orderData['quantity'] as num).toInt();
+      final rawItems = orderData['items'] as List<dynamic>? ?? [];
+      final items = rawItems.map((e) => OrderItem.fromMap(e as Map<String, dynamic>)).toList();
 
-      // Replenish the retailer's stock in the product document.
-      final productRef = _db.collection('products').doc(productId);
-      final productDoc = await txn.get(productRef);
+      // Replenish the retailer's stock in the product document for each item.
+      for (final item in items) {
+        final productRef = _db.collection('products').doc(item.productId);
+        final productDoc = await txn.get(productRef);
 
-      if (productDoc.exists) {
-        final productData = productDoc.data()!;
-        final retailers = List<Map<String, dynamic>>.from(
-          productData['retailers'] as List<dynamic>,
-        );
+        if (productDoc.exists) {
+          final productData = productDoc.data()!;
+          final retailers = List<Map<String, dynamic>>.from(
+            productData['retailers'] as List<dynamic>,
+          );
 
-        final idx = retailers.indexWhere((r) => r['retailerId'] == retailerId);
-        if (idx != -1) {
-          final currentStock = (retailers[idx]['stock'] as num).toInt();
-          retailers[idx] = {
-            ...retailers[idx],
-            'stock': currentStock + quantity,
-          };
+          final idx = retailers.indexWhere((r) => r['retailerId'] == retailerId);
+          if (idx != -1) {
+            final currentStock = (retailers[idx]['stock'] as num).toInt();
+            retailers[idx] = {
+              ...retailers[idx],
+              'stock': currentStock + item.quantity,
+            };
 
-          txn.update(productRef, {'retailers': retailers});
+            txn.update(productRef, {'retailers': retailers});
+          }
         }
       }
 
