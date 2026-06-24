@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'providers/role_provider.dart';
+import 'providers/cart_provider.dart';
 import 'screens/customer/customer_home_screen.dart';
 import 'screens/delivery/delivery_home_screen.dart';
 import 'screens/retailer/retailer_home_screen.dart';
@@ -20,8 +21,11 @@ Future<void> main() async {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => RoleProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => RoleProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
       child: const NearFindApp(),
     ),
   );

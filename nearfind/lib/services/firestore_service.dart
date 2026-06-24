@@ -197,18 +197,64 @@ class FirestoreService {
   }
 
   /// Cancels an order with a [reason], setting status to cancelled.
+  /// Also replenishes the retailer's stock for the product.
   Future<void> cancelOrder(String orderId, String reason) async {
-    await _db.collection('orders').doc(orderId).update({
-      'status': OrderStatus.cancelled.name,
-      'cancellationReason': reason,
-      'statusHistory': FieldValue.arrayUnion([
-        {
-          'status': OrderStatus.cancelled.name,
-          'timestamp': Timestamp.now(),
-          'comment': reason,
-        },
-      ]),
+    await _db.runTransaction((txn) async {
+      final orderRef = _db.collection('orders').doc(orderId);
+      final orderDoc = await txn.get(orderRef);
+
+      if (!orderDoc.exists) {
+        throw Exception('Order $orderId not found');
+      }
+
+      final orderData = orderDoc.data()!;
+      final currentStatus = orderData['status'] as String;
+
+      // If already cancelled, do not replenish stock again.
+      if (currentStatus == OrderStatus.cancelled.name) {
+        return;
+      }
+
+      final productId = orderData['productId'] as String;
+      final retailerId = orderData['retailerId'] as String;
+      final quantity = (orderData['quantity'] as num).toInt();
+
+      // Replenish the retailer's stock in the product document.
+      final productRef = _db.collection('products').doc(productId);
+      final productDoc = await txn.get(productRef);
+
+      if (productDoc.exists) {
+        final productData = productDoc.data()!;
+        final retailers = List<Map<String, dynamic>>.from(
+          productData['retailers'] as List<dynamic>,
+        );
+
+        final idx = retailers.indexWhere((r) => r['retailerId'] == retailerId);
+        if (idx != -1) {
+          final currentStock = (retailers[idx]['stock'] as num).toInt();
+          retailers[idx] = {
+            ...retailers[idx],
+            'stock': currentStock + quantity,
+          };
+
+          txn.update(productRef, {'retailers': retailers});
+        }
+      }
+
+      // Update order document.
+      txn.update(orderRef, {
+        'status': OrderStatus.cancelled.name,
+        'cancellationReason': reason,
+        'statusHistory': FieldValue.arrayUnion([
+          {
+            'status': OrderStatus.cancelled.name,
+            'timestamp': Timestamp.now(),
+            'comment': reason,
+          },
+        ]),
+      });
     });
+
     OrderTimerService.instance.cancelTimer(orderId);
   }
 
