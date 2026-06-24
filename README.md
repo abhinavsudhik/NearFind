@@ -39,7 +39,7 @@ For ease of testing and demonstration, you can switch between the four available
 The codebase is organized logically into clean architectural layers within the `lib/` directory:
 
 ```text
-nearfind/lib/
+lib/
 ├── models/         # Data classes mapping Firestore documents (Product, NearFindOrder)
 ├── services/       # Services managing backend logic (FirestoreService, OrderTimerService)
 ├── providers/      # Providers managing global state and authentication
