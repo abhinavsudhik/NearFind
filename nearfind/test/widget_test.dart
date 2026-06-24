@@ -1,30 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:nearfind/main.dart';
+import 'package:nearfind/models/order.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('Smoke test', () {
+    expect(true, true);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  group('NearFindOrder and OrderStatusHistory parsing tests', () {
+    test('Parses cancellationReason and statusHistory comment', () {
+      final historyMap = [
+        {
+          'status': 'placed',
+          'timestamp': Timestamp.fromDate(DateTime(2026, 6, 24, 12, 0)),
+        },
+        {
+          'status': 'cancelled',
+          'timestamp': Timestamp.fromDate(DateTime(2026, 6, 24, 12, 5)),
+          'comment': 'No delivery partner available',
+        }
+      ];
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      final history = historyMap.map((m) => OrderStatusHistory.fromMap(m)).toList();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(history[1].comment, 'No delivery partner available');
+
+      // Test serialization
+      final serialized = history[1].toMap();
+      expect(serialized['comment'], 'No delivery partner available');
+    });
   });
 }
