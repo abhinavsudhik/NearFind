@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "224642107781",
+    "project_id": "nearfind-2c220",
+    "storage_bucket": "nearfind-2c220.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:224642107781:android:21d7a3a53185723ae59cec",
+        "android_client_info": {
+          "package_name": "com.nearfind.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhdBMBfSqMnG3Gliv3JAxX4hB9t56inWs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
