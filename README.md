@@ -13,7 +13,7 @@ NearFind is a hyperlocal delivery mobile application built with Flutter and Fire
 
 To run the application on an Android device:
 
-1.  **Download the APK:** Navigate to the [Releases](https://github.com/your-username/nearfind/releases) section of this GitHub repository and download the latest `.apk` asset.
+1.  **Download the APK:** Navigate to the [Releases](https://github.com/abhinavsudhik/NearFind/releases/tag/v1.0.0) section of this GitHub repository and download the latest `.apk` asset.
 2.  **Enable Unknown Sources:** Go to your Android device's **Settings** > **Security** (or **Apps & Notifications** > **Special App Access**), and toggle on **Install Unknown Apps** for your web browser or file manager.
 3.  **Install the App:** Open your device's downloads folder, tap the downloaded APK, and follow the system prompts to complete installation.
 
